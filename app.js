@@ -1,27 +1,86 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadFiles();
+  initMap();
 });
 
-async function loadFiles() {
+let currentPath = "";
+
+async function loadFiles(path = "") {
+  updateBreadcrumb(path);
+  currentPath = path;
+
   const fileListContainer = document.getElementById("fileList");
   fileListContainer.innerHTML = "<p>Loading files...</p>";
 
   try {
-    const response = await fetch("/files");
-    const files = await response.json();
+    const response = await fetch(`/files?path=${encodeURIComponent(path)}`);
+    const { entries } = await response.json();
 
     fileListContainer.innerHTML = "";
-    files.forEach((file) => {
-      const fileItem = document.createElement("div");
-      fileItem.className = "file-item";
-      fileItem.textContent = file;
-      fileItem.addEventListener("click", () => loadExifData(file));
-      fileListContainer.appendChild(fileItem);
+
+    // Botón para volver atrás
+    if (path !== "") {
+      const upItem = document.createElement("div");
+      upItem.className = "file-item folder";
+      upItem.textContent = ".. (up)";
+      upItem.addEventListener("click", () => {
+        const parentPath = path.split("/").slice(0, -1).join("/");
+        loadFiles(parentPath);
+      });
+      fileListContainer.appendChild(upItem);
+    }
+
+    entries.forEach(({ name, isDirectory }) => {
+      const item = document.createElement("div");
+      item.className = "file-item";
+      item.textContent = name;
+
+      if (isDirectory) {
+        item.classList.add("folder");
+        item.addEventListener("click", () =>
+          loadFiles(`${path}/${name}`.replace(/^\/+/, ""))
+        );
+      } else {
+        item.addEventListener("click", () =>
+          loadExifData(`${path}/${name}`.replace(/^\/+/, ""))
+        );
+      }
+
+      fileListContainer.appendChild(item);
     });
   } catch (error) {
     console.error("Error loading files:", error);
     fileListContainer.innerHTML = "<p>Error loading files.</p>";
   }
+}
+
+function updateBreadcrumb(path) {
+  const breadcrumbContainer = document.getElementById("breadcrumb");
+  breadcrumbContainer.innerHTML = "";
+
+  const parts = path.split("/").filter(Boolean);
+  let accumulatedPath = "";
+
+  // Agregar el enlace a "Raíz"
+  const rootLink = document.createElement("span");
+  rootLink.textContent = "📁 Root";
+  rootLink.style.cursor = "pointer";
+  rootLink.addEventListener("click", () => loadFiles(""));
+  breadcrumbContainer.appendChild(rootLink);
+
+  parts.forEach((part, index) => {
+    breadcrumbContainer.appendChild(document.createTextNode(" / "));
+
+    accumulatedPath += "/" + part;
+    const partLink = document.createElement("span");
+    partLink.textContent = part;
+    partLink.style.cursor = "pointer";
+    partLink.addEventListener("click", () =>
+      loadFiles(accumulatedPath.replace(/^\/+/, ""))
+    );
+
+    breadcrumbContainer.appendChild(partLink);
+  });
 }
 
 async function loadExifData(fileName) {
@@ -90,11 +149,6 @@ async function loadExifData(fileName) {
     exifDataContainer.innerHTML = "<p>Error loading EXIF data.</p>";
   }
 }
-
-// Llamar al inicializador del mapa cuando se cargue el DOM
-document.addEventListener("DOMContentLoaded", () => {
-  initMap();
-});
 
 function convertDMSToDD(dms, ref) {
   let degrees, minutes, seconds;

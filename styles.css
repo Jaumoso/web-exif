@@ -66,3 +66,8 @@ h1 {
     border: 1px solid #ddd;
     border-radius: 4px;
 }
+
+.file-item.folder {
+    font-weight: bold;
+    cursor: pointer;
+  }

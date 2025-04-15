@@ -12,14 +12,24 @@ app.use(express.static(rootDir));
 
 // Listar archivos multimedia en la raíz del proyecto
 app.get("/files", (req, res) => {
-  fs.readdir(rootDir, (err, files) => {
+  const relPath = req.query.path || "";
+  const targetPath = path.join(rootDir, relPath);
+
+  if (!targetPath.startsWith(rootDir)) {
+    return res.status(400).send("Invalid path.");
+  }
+
+  fs.readdir(targetPath, { withFileTypes: true }, (err, entries) => {
     if (err) {
-      return res.status(500).send("Error reading files.");
+      return res.status(500).send("Error reading directory.");
     }
-    const mediaFiles = files.filter((file) =>
-      /\.(jpg|jpeg|png|mp4|mov)$/i.test(file)
-    );
-    res.json(mediaFiles);
+
+    const result = entries.map((entry) => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory(),
+    }));
+
+    res.json({ path: relPath, entries: result });
   });
 });
 
