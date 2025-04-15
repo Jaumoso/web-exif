@@ -92,8 +92,29 @@ async function loadExifData(fileName) {
     const img = new Image();
     img.src = `/${fileName}`;
     img.onload = () => {
+      const previewContainer = document.getElementById("imagePreview");
+      previewContainer.innerHTML = "";
+      previewContainer.appendChild(img);
+
+      img.style.maxWidth = "200px";
+      img.style.cursor = "pointer";
+
+      img.addEventListener("click", () => {
+        const modal = document.getElementById("imageModal");
+        const modalImg = document.getElementById("modalImage");
+        modalImg.src = img.src;
+
+        const orientation = EXIF.getTag(img, "Orientation");
+        applyOrientation(modalImg, orientation);
+
+        modal.style.display = "flex";
+      });
       EXIF.getData(img, function () {
         const exifData = EXIF.getAllTags(this);
+
+        if (exifData.Orientation) {
+          applyOrientation(img, exifData.Orientation);
+        }
 
         exifDataContainer.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
         const exifList = document.createElement("ul");
@@ -148,6 +169,21 @@ async function loadExifData(fileName) {
     console.error("Error loading EXIF data:", error);
     exifDataContainer.innerHTML = "<p>Error loading EXIF data.</p>";
   }
+}
+
+function applyOrientation(img, orientation) {
+  const transformMap = {
+    2: "scaleX(-1)",
+    3: "rotate(180deg)",
+    4: "scaleY(-1)",
+    5: "rotate(90deg) scaleY(-1)",
+    6: "rotate(90deg)",
+    7: "rotate(-90deg) scaleY(-1)",
+    8: "rotate(-90deg)",
+  };
+
+  const transform = transformMap[orientation] || "none";
+  img.style.transform = transform;
 }
 
 function convertDMSToDD(dms, ref) {
@@ -295,3 +331,13 @@ function updateExifInputsFromCoords(lat, lon) {
   if (lonInput) lonInput.value = lonDMS.dms;
   if (lonRefInput) lonRefInput.value = lonDMS.ref;
 }
+
+document.querySelector("#imageModal .close").addEventListener("click", () => {
+  document.getElementById("imageModal").style.display = "none";
+});
+
+document.getElementById("imageModal").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.style.display = "none";
+  }
+});
