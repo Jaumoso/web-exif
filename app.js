@@ -304,7 +304,12 @@ function convertDDToDMS(dd, isLat) {
   const minutes = Math.floor(minutesFloat);
   const seconds = ((minutesFloat - minutes) * 60).toFixed(4);
 
-  const ref = isLat ? (dd >= 0 ? "N" : "S") : dd >= 0 ? "E" : "W";
+  let ref;
+  if (isLat) {
+    ref = dd >= 0 ? "N" : "S";
+  } else {
+    ref = dd >= 0 ? "E" : "W";
+  }
 
   return {
     dms: `${degrees} deg ${minutes}' ${seconds}"`,

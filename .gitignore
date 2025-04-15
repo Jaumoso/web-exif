@@ -1,5 +1,15 @@
 server/node_modules
 server/uploads
 PXL*
+IMG*
+VID*
+MOV*
+*.mp4
+*.mov
+*.avi
+*.mkv
 *.jpg
 *.png
+*.jpeg
+*.gif
+*.webp
