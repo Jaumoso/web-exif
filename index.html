@@ -49,6 +49,16 @@
         background-color: #0056b3;
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      #map {
+        height: 400px;
+        margin-top: 20px;
+      }
+    </style>
   </head>
   <body>
     <h1>EXIF Editor</h1>
@@ -56,5 +66,24 @@
     <div id="exifData"></div>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="app.js"></script>
+    <h2>Location</h2>
+    <input
+      type="text"
+      id="locationSearch"
+      placeholder="Search for a place..."
+    />
+    <button onclick="searchLocation()">Search</button>
+    <br /><br />
+    <input
+      type="text"
+      id="coordInput"
+      placeholder="lat, lon (e.g. 39.4699, -0.3763)"
+    />
+    <button onclick="updateFromCoords()">Set Coordinates</button>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   </body>
 </html>

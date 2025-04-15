@@ -34,7 +34,8 @@ app.post("/update-exif", async (req, res) => {
 
   try {
     await exiftool.write(filePath, exifData, [
-      "-overwrite_original_in_place",
+      "-overwrite_original",
+      // "-gps:all=", // Limpia todos los campos GPS antes
       "-preserve",
     ]);
     res.send("EXIF data updated successfully.");
