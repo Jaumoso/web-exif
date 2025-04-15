@@ -4,86 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EXIF Editor</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-      }
-      #fileList {
-        margin-bottom: 20px;
-      }
-      .file-item {
-        cursor: pointer;
-        padding: 5px;
-        border: 1px solid #ccc;
-        margin-bottom: 5px;
-      }
-      .file-item:hover {
-        background-color: #f0f0f0;
-      }
-      #exifData {
-        margin-top: 20px;
-      }
-      ul {
-        list-style: none;
-        padding: 0;
-      }
-      li {
-        margin-bottom: 10px;
-      }
-      label {
-        font-weight: bold;
-      }
-      input {
-        margin-left: 10px;
-      }
-      button {
-        margin-top: 20px;
-        padding: 10px 20px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        cursor: pointer;
-      }
-      button:hover {
-        background-color: #0056b3;
-      }
-    </style>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-    <style>
-      #map {
-        height: 400px;
-        margin-top: 20px;
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <h1>EXIF Editor</h1>
-    <div id="fileList"></div>
-    <div id="exifData"></div>
+    <div class="container">
+      <div id="fileNavigator">
+        <h2>Files</h2>
+        <div id="fileList"></div>
+      </div>
+      <div id="editor">
+        <div id="exifData"></div>
+        <h2>Location</h2>
+        <input
+          type="text"
+          id="locationSearch"
+          placeholder="Search for a place..."
+        />
+        <button onclick="searchLocation()">Search</button>
+        <br /><br />
+        <input
+          type="text"
+          id="coordInput"
+          placeholder="lat, lon (e.g. 39.4699, -0.3763)"
+        />
+        <button onclick="updateFromCoords()">Set Coordinates</button>
+        <div id="map"></div>
+      </div>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
-    <script src="app.js"></script>
-    <h2>Location</h2>
-    <input
-      type="text"
-      id="locationSearch"
-      placeholder="Search for a place..."
-    />
-    <button onclick="searchLocation()">Search</button>
-    <br /><br />
-    <input
-      type="text"
-      id="coordInput"
-      placeholder="lat, lon (e.g. 39.4699, -0.3763)"
-    />
-    <button onclick="updateFromCoords()">Set Coordinates</button>
-
-    <div id="map"></div>
-
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
   </body>
 </html>
