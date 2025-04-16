@@ -6,6 +6,13 @@ const { exiftool } = require("exiftool-vendored");
 const app = express();
 const rootDir = path.resolve(__dirname, "../");
 
+const limiter = RateLimit({
+  windowsMs: 5 * 60 * 1000, // 5 minutes
+  max: 100, // max 100 requests per windowMS
+});
+
+app.use(limiter);
+
 // Aumentar el límite del tamaño del cuerpo de las solicitudes JSON
 app.use(express.json({ limit: "100mb" })); // Cambia "10mb" según tus necesidades
 app.use(express.static(rootDir));
