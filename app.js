@@ -13,7 +13,7 @@ async function loadFiles(path = "") {
   fileListContainer.innerHTML = "<p>Loading files...</p>";
 
   try {
-    const response = await fetch(`/files?path=${encodeURIComponent(path)}`);
+    const response = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
     const { entries } = await response.json();
 
     fileListContainer.innerHTML = "";
@@ -219,7 +219,7 @@ async function saveExifData(fileName, exifList) {
   }
 
   try {
-    const response = await fetch("/update-exif", {
+    const response = await fetch(`/api/update-exif`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

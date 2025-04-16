@@ -13,3 +13,4 @@ MOV*
 *.jpeg
 *.gif
 *.webp
+.env

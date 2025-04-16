@@ -1,0 +1,30 @@
+services:
+  web-exif:
+    container_name: web-exif
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: no
+    ports:
+      - 4200:80
+    depends_on:
+      - web-exif-server
+    networks:
+      - web-exif
+
+  web-exif-server:
+    container_name: web-exif-server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: no
+    ports:
+      - 3000:3000
+    volumes:
+      - ./server/media:/app/media
+    networks:
+      - web-exif
+
+networks:
+  web-exif:
+    driver: bridge

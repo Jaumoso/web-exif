@@ -1,25 +1,38 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const cors = require("cors");
+const bodyParser = require("body-parser");
 const { exiftool } = require("exiftool-vendored");
 const RateLimit = require("express-rate-limit");
+require("dotenv").config({ path: path.resolve(__dirname, "./.env") });
 
-const app = express();
-const rootDir = path.resolve(__dirname, "../");
+const PORT = process.env.PORT || 3000;
 
+const rootDir = path.resolve(__dirname, "./media");
 const limiter = RateLimit({
   windowsMs: 5 * 60 * 1000, // 5 minutes
   max: 100, // max 100 requests per windowMS
 });
 
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(limiter);
+
+// Trust frontend proxy
+app.set("trust proxy", 1);
+
 app.use(limiter);
 
 // Aumentar el límite del tamaño del cuerpo de las solicitudes JSON
-app.use(express.json({ limit: "100mb" })); // Cambia "10mb" según tus necesidades
+app.use(express.json({ limit: "100mb" }));
 app.use(express.static(rootDir));
 
 // Listar archivos multimedia en la raíz del proyecto
-app.get("/files", (req, res) => {
+app.get("/api/files", (req, res) => {
   const relPath = req.query.path || "";
   const targetPath = path.join(rootDir, relPath);
 
@@ -42,7 +55,7 @@ app.get("/files", (req, res) => {
 });
 
 // Actualizar datos EXIF de un archivo
-app.post("/update-exif", async (req, res) => {
+app.post("/api/update-exif", async (req, res) => {
   const { fileName, exifData } = req.body;
   const filePath = path.resolve(rootDir, fileName);
 
@@ -63,6 +76,10 @@ app.post("/update-exif", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server is running on http://localhost:3000");
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Hello from the server!" });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
