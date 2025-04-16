@@ -17,7 +17,7 @@ const limiter = RateLimit({
 
 const app = express();
 
-// Middleware
+// Middlewares
 app.use(cors());
 app.use(bodyParser.json());
 app.use(limiter);
@@ -27,11 +27,11 @@ app.set("trust proxy", 1);
 
 app.use(limiter);
 
-// Aumentar el límite del tamaño del cuerpo de las solicitudes JSON
+// Increase the limit on the body size of JSON requests
 app.use(express.json({ limit: "100mb" }));
 app.use(express.static(rootDir));
 
-// Listar archivos multimedia en la raíz del proyecto
+// List media files in the root folder
 app.get("/api/files", (req, res) => {
   const relPath = req.query.path || "";
   const targetPath = path.join(rootDir, relPath);
@@ -54,7 +54,7 @@ app.get("/api/files", (req, res) => {
   });
 });
 
-// Actualizar datos EXIF de un archivo
+// Update EXIF ​​data of a file
 app.post("/api/update-exif", async (req, res) => {
   const { fileName, exifData } = req.body;
   const filePath = path.resolve(rootDir, fileName);
@@ -64,11 +64,13 @@ app.post("/api/update-exif", async (req, res) => {
   }
 
   try {
-    await exiftool.write(filePath, exifData, [
-      "-overwrite_original",
-      // "-gps:all=", // Limpia todos los campos GPS antes
-      "-preserve",
-    ]);
+    await exiftool.write(filePath, exifData, {
+      writeArgs: [
+        "-overwrite_original",
+        // "-gps:all=", // Clear all GPS fields before writing new ones
+        "-preserve",
+      ],
+    });
     res.send("EXIF data updated successfully.");
   } catch (error) {
     console.error("Error updating EXIF data:", error);
@@ -78,6 +80,14 @@ app.post("/api/update-exif", async (req, res) => {
 
 app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from the server!" });
+});
+
+const frontendPath = path.resolve(__dirname, "../public");
+app.use(express.static(frontendPath));
+
+// Fallback for frontend routing to work (Single Page App)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 app.listen(PORT, "0.0.0.0", () => {

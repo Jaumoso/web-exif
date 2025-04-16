@@ -1,12 +1,16 @@
-FROM nginx:alpine
+FROM node:23-slim
 
-COPY index.html /usr/share/nginx/html/index.html
-COPY styles.css /usr/share/nginx/html/styles.css
-COPY app.js /usr/share/nginx/html/app.js
-COPY nginx.conf /etc/nginx/nginx.conf
+WORKDIR /app
 
-EXPOSE 80
+# Copiar dependencias del backend
+COPY server/package*.json ./server/
+RUN cd server && npm install
 
-VOLUME /app
+# Copiar el resto del proyecto
+COPY . .
 
-CMD ["nginx", "-g", "daemon off;"]
+# Crear carpeta de media
+RUN mkdir -p server/media
+
+EXPOSE 3000
+CMD ["node", "server/server.js"]

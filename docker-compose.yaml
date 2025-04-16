@@ -1,0 +1,9 @@
+services:
+  web-exif:
+    container_name: web-exif
+    image: ghcr.io/jaumoso/web-exif:latest
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - ./media:/app/media
