@@ -44,10 +44,10 @@ app.get("/files", (req, res) => {
 // Actualizar datos EXIF de un archivo
 app.post("/update-exif", async (req, res) => {
   const { fileName, exifData } = req.body;
-  const filePath = path.join(rootDir, fileName);
+  const filePath = path.resolve(rootDir, fileName);
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("File not found.");
+  if (!filePath.startsWith(rootDir) || !fs.existsSync(filePath)) {
+    return res.status(404).send("File not found or invalid path.");
   }
 
   try {
