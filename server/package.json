@@ -12,6 +12,7 @@
   "dependencies": {
     "exiftool-vendored": "^29.3.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
     "multer": "^1.4.5-lts.2"
   }
 }

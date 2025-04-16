@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const { exiftool } = require("exiftool-vendored");
+const RateLimit = require("express-rate-limit");
 
 const app = express();
 const rootDir = path.resolve(__dirname, "../");
