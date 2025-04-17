@@ -18,12 +18,12 @@ const limiter = RateLimit({
 const app = express();
 
 // Middlewares
-app.use(cors());
-app.use(bodyParser.json());
+// app.use(cors());
+// app.use(bodyParser.json());
 app.use(limiter);
 
 // Trust frontend proxy
-app.set("trust proxy", 1);
+// app.set("trust proxy", 1);
 
 app.use(limiter);
 
@@ -32,7 +32,7 @@ app.use(express.json({ limit: "100mb" }));
 app.use(express.static(rootDir));
 
 // List media files in the root folder
-app.get("/api/files", (req, res) => {
+app.get("/files", (req, res) => {
   const relPath = req.query.path || "";
   const targetPath = path.join(rootDir, relPath);
 
@@ -55,7 +55,7 @@ app.get("/api/files", (req, res) => {
 });
 
 // Update EXIF ​​data of a file
-app.post("/api/update-exif", async (req, res) => {
+app.post("/update-exif", async (req, res) => {
   const { fileName, exifData } = req.body;
   const filePath = path.resolve(rootDir, fileName);
 
@@ -78,7 +78,7 @@ app.post("/api/update-exif", async (req, res) => {
   }
 });
 
-app.get("/api/hello", (req, res) => {
+app.get("/hello", (req, res) => {
   res.json({ message: "Hello from the server!" });
 });
 
