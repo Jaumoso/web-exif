@@ -4,7 +4,6 @@ window.addEventListener("DOMContentLoaded", () => {
   loadFiles();
 });
 
-document.getElementById("searchBtn").addEventListener("click", searchLocation);
 document
   .getElementById("setCoordBtn")
   .addEventListener("click", updateFromCoords);
@@ -237,8 +236,13 @@ function convertDDToDMS(dd, isLat) {
   const minFloat = (abs - deg) * 60;
   const min = Math.floor(minFloat);
   const sec = ((minFloat - min) * 60).toFixed(4);
-  const ref = isLat ? (dd >= 0 ? "N" : "S") : dd >= 0 ? "E" : "W";
-  return { dms: `${deg} deg ${min}' ${sec}\"`, ref };
+  let ref;
+  if (isLat) {
+    ref = dd >= 0 ? "N" : "S";
+  } else {
+    ref = dd >= 0 ? "E" : "W";
+  }
+  return { dms: `${deg} deg ${min}' ${sec}"`, ref };
 }
 
 function showModal(img) {
@@ -259,31 +263,71 @@ document.getElementById("imageModal").addEventListener("click", (e) => {
   if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
 });
 
-async function searchLocation() {
-  const query = document.getElementById("locationSearch").value;
-  if (!query) return;
+// DROPDOWN LOCATION SEARCH
+const searchInput = document.getElementById("locationSearch");
+const dropdown = document.getElementById("dropdown");
 
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+let debounceTimeout;
+searchInput.addEventListener("input", () => {
+  clearTimeout(debounceTimeout);
+  const query = searchInput.value.trim();
+
+  if (!query) {
+    dropdown.classList.add("hidden");
+    return;
+  }
+
+  debounceTimeout = setTimeout(() => {
+    fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(
         query
       )}`
-    );
-    const data = await res.json();
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        dropdown.innerHTML = "";
+        if (!data.length) {
+          dropdown.classList.add("hidden");
+          return;
+        }
 
-    if (data.length) {
-      const { lat, lon } = data[0];
-      const latNum = parseFloat(lat);
-      const lonNum = parseFloat(lon);
-      marker.setLatLng([latNum, lonNum]);
-      map.setView([latNum, lonNum], 14);
-      document.getElementById("coordInput").value = `${latNum}, ${lonNum}`;
-      updateExifInputsFromCoords(latNum, lonNum);
-    } else {
-      alert("Location not found");
-    }
-  } catch (err) {
-    console.error("Location search error:", err);
-    alert("Error searching location");
+        data.forEach((item) => {
+          const option = document.createElement("div");
+          option.textContent = item.display_name;
+          option.addEventListener("click", () => {
+            const latNum = parseFloat(item.lat);
+            const lonNum = parseFloat(item.lon);
+            marker.setLatLng([latNum, lonNum]);
+            map.setView([latNum, lonNum], 14);
+            document.getElementById(
+              "coordInput"
+            ).value = `${latNum}, ${lonNum}`;
+            updateExifInputsFromCoords(latNum, lonNum);
+            searchInput.value = item.display_name;
+            dropdown.classList.add("hidden");
+          });
+          dropdown.appendChild(option);
+        });
+
+        const rect = searchInput.getBoundingClientRect();
+        dropdown.style.top = `${
+          searchInput.offsetTop + searchInput.offsetHeight
+        }px`;
+        dropdown.style.left = `${searchInput.offsetLeft}px`;
+        dropdown.style.width = `${searchInput.offsetWidth}px`;
+
+        dropdown.classList.remove("hidden");
+      })
+      .catch((err) => {
+        console.error("Autocomplete error:", err);
+        dropdown.classList.add("hidden");
+      });
+  }, 300); // debounce delay
+});
+
+// Hide dropdown on outside click
+document.addEventListener("click", (e) => {
+  if (!dropdown.contains(e.target) && e.target !== searchInput) {
+    dropdown.classList.add("hidden");
   }
-}
+});

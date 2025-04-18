@@ -16,18 +16,7 @@ const limiter = RateLimit({
 });
 
 const app = express();
-
-// Middlewares
-// app.use(cors());
-// app.use(bodyParser.json());
 app.use(limiter);
-
-// Trust frontend proxy
-// app.set("trust proxy", 1);
-
-app.use(limiter);
-
-// Increase the limit on the body size of JSON requests
 app.use(express.json({ limit: "100mb" }));
 app.use(express.static(rootDir));
 
@@ -66,11 +55,7 @@ app.post("/update-exif", async (req, res) => {
   try {
     console.log(exifData);
     await exiftool.write(filePath, exifData, {
-      writeArgs: [
-        "-overwrite_original",
-        "-gps:all=", // Clear all GPS fields before writing new ones
-        "-preserve",
-      ],
+      writeArgs: ["-overwrite_original", "-gps:all=", "-preserve"],
     });
     res.send("EXIF data updated successfully.");
   } catch (error) {
@@ -79,15 +64,14 @@ app.post("/update-exif", async (req, res) => {
   }
 });
 
-app.get("/hello", (req, res) => {
+app.get("/hello", (_, res) => {
   res.json({ message: "Hello from the server!" });
 });
 
 const frontendPath = path.resolve(__dirname, "../public");
 app.use(express.static(frontendPath));
 
-// Fallback for frontend routing to work (Single Page App)
-app.get("/", (req, res) => {
+app.get("/", (_, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
