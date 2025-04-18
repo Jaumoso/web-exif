@@ -4,10 +4,6 @@ window.addEventListener("DOMContentLoaded", () => {
   loadFiles();
 });
 
-document
-  .getElementById("setCoordBtn")
-  .addEventListener("click", updateFromCoords);
-
 let currentPath = "";
 let map, marker;
 
@@ -106,13 +102,56 @@ function displayImageWithExif(img, fileName) {
     container.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
 
     const list = document.createElement("ul");
+    list.setAttribute("id", "exifParametersList");
+
+    const nonEditableTags = ["thumbnail"];
+    const enumTags = {
+      Flash: {
+        0x0: "Flash did not fire",
+        0x1: "Flash fired",
+        0x5: "Strobe return light not detected",
+        0x7: "Flash fired, strobe return light detected",
+        0x9: "Flash fired, compulsory flash mode",
+        0xd: "Flash fired, compulsory flash mode, return light not detected",
+        0xf: "Flash fired, compulsory flash mode, return light detected",
+        0x10: "Flash did not fire, compulsory flash mode",
+        // Add more if needed
+      },
+    };
+
     Object.entries(exif).forEach(([tag, value]) => {
+      if (nonEditableTags.includes(tag)) return;
+
       const li = document.createElement("li");
       const label = document.createElement("label");
       label.textContent = `${tag}: `;
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = value;
+
+      let input;
+      if (enumTags[tag]) {
+        input = document.createElement("select");
+        for (const [key, labelText] of Object.entries(enumTags[tag])) {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = labelText;
+          if (value == key || value == labelText) option.selected = true;
+          input.appendChild(option);
+        }
+      } else if (typeof value === "number") {
+        input = document.createElement("input");
+        input.type = "number";
+        input.step = "any";
+        input.value = value;
+      } else if (typeof value === "string") {
+        input = document.createElement("input");
+        input.type = "text";
+        input.value = value;
+      } else {
+        input = document.createElement("input");
+        input.type = "text";
+        input.value = JSON.stringify(value);
+        input.readOnly = true;
+      }
+
       input.dataset.tag = tag;
       li.append(label, input);
       list.appendChild(li);
@@ -125,6 +164,7 @@ function displayImageWithExif(img, fileName) {
     saveBtn.addEventListener("click", () => saveExifData(fileName, list));
     container.appendChild(saveBtn);
 
+    // GPS to map
     if (exif.GPSLatitude && exif.GPSLongitude) {
       const lat = convertDMSToDD(exif.GPSLatitude, exif.GPSLatitudeRef);
       const lon = convertDMSToDD(exif.GPSLongitude, exif.GPSLongitudeRef);
@@ -159,15 +199,6 @@ function convertDMSToDD(dms, ref) {
   return ["S", "W"].includes(ref) ? -dd : dd;
 }
 
-function updateFromCoords() {
-  const input = document.getElementById("coordInput").value;
-  const [lat, lon] = input.split(",").map((n) => parseFloat(n.trim()));
-  if (!isNaN(lat) && !isNaN(lon)) {
-    marker.setLatLng([lat, lon]);
-    map.setView([lat, lon], 14);
-  }
-}
-
 async function saveExifData(fileName, exifList) {
   const exifData = {};
   Array.from(exifList.querySelectorAll("input")).forEach((input) => {
@@ -181,9 +212,14 @@ async function saveExifData(fileName, exifList) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileName, exifData }),
     });
+    const data = await res.json();
     alert(
       res.ok ? "EXIF data updated successfully." : "Error updating EXIF data."
     );
+    if (data.warnings.length > 0) {
+      console.warn("Exiftool warnings:", data.warnings);
+      alert("Exiftool warnings:\n" + data.warnings.join("\n"));
+    }
   } catch (err) {
     console.error("Error saving EXIF data:", err);
     alert("Error saving EXIF data.");
@@ -329,5 +365,29 @@ searchInput.addEventListener("input", () => {
 document.addEventListener("click", (e) => {
   if (!dropdown.contains(e.target) && e.target !== searchInput) {
     dropdown.classList.add("hidden");
+  }
+});
+
+function updateFromCoords() {
+  const input = document.getElementById("coordInput").value;
+  const [lat, lon] = input.split(",").map((n) => parseFloat(n.trim()));
+  if (!isNaN(lat) && !isNaN(lon)) {
+    marker.setLatLng([lat, lon]);
+    map.setView([lat, lon], 14);
+  }
+}
+
+document.getElementById("coordInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+
+    const input = e.target.value.trim();
+    const coords = input.split(",").map((x) => parseFloat(x));
+
+    if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+      updateFromCoords();
+    } else {
+      alert('Invalid coordinates. Please use "lat, lon" format.');
+    }
   }
 });

@@ -42,24 +42,26 @@
 
         <div id="locationTools">
           <h2>Location</h2>
-          <label for="locationSearch">Search for a place:</label>
-          <input
-            type="text"
-            id="locationSearch"
-            placeholder="e.g. Valencia, Spain"
-          />
-          <div id="dropdown" class="dropdown hidden"></div>
+          <div class="location-inputs">
+            <div class="input-group">
+              <label for="locationSearch">Search for a place</label>
+              <input
+                type="text"
+                id="locationSearch"
+                placeholder="e.g. Valencia, Spain"
+              />
+              <div id="dropdown" class="dropdown hidden"></div>
+            </div>
 
-          <br />
-          <!-- <br /> -->
-
-          <label for="coordInput">Coordinates:</label>
-          <input
-            type="text"
-            id="coordInput"
-            placeholder="lat, lon (e.g. 39.4699, -0.3763)"
-          />
-          <button id="setCoordBtn">Set Coordinates</button>
+            <div class="input-group">
+              <label for="coordInput">Coordinates</label>
+              <input
+                type="text"
+                id="coordInput"
+                placeholder="lat, lon (e.g. 39.4699, -0.3763)"
+              />
+            </div>
+          </div>
         </div>
 
         <div id="map" aria-label="Map with draggable marker"></div>

@@ -53,11 +53,16 @@ app.post("/update-exif", async (req, res) => {
   }
 
   try {
-    console.log(exifData);
-    await exiftool.write(filePath, exifData, {
+    console.log("Received EXIF data:", exifData);
+    const result = await exiftool.write(filePath, exifData, {
       writeArgs: ["-overwrite_original", "-gps:all=", "-preserve"],
     });
-    res.send("EXIF data updated successfully.");
+    console.log("Exiftool result:", result);
+
+    res.json({
+      message: "EXIF data updated successfully.",
+      warnings: result.warnings || [],
+    });
   } catch (error) {
     console.error("Error updating EXIF data:", error);
     res.status(500).send("Error updating EXIF data.");
