@@ -11,37 +11,61 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1>EXIF Editor</h1>
-    <div class="container">
-      <div id="fileNavigator">
+    <header>
+      <h1>EXIF Editor</h1>
+    </header>
+
+    <main class="container">
+      <aside id="fileNavigator" aria-label="File Navigation">
         <h2>Files</h2>
-        <div id="breadcrumb"></div>
+        <nav id="breadcrumb" aria-label="Breadcrumb"></nav>
         <div id="fileList"></div>
-        <div id="imagePreview" class="image-preview"></div>
-        <div id="imageModal" class="modal" style="display: none">
-          <span class="close">&times;</span>
-          <img class="modal-content" id="modalImage" alt="preview" />
+        <div
+          id="imagePreview"
+          class="image-preview"
+          aria-label="Image Preview"
+        ></div>
+
+        <div
+          id="imageModal"
+          class="modal"
+          style="display: none"
+          aria-hidden="true"
+        >
+          <button class="close" aria-label="Close preview">&times;</button>
+          <img id="modalImage" class="modal-content" alt="Full preview" />
         </div>
-      </div>
-      <div id="editor">
-        <div id="exifData"></div>
-        <h2>Location</h2>
-        <input
-          type="text"
-          id="locationSearch"
-          placeholder="Search for a place..."
-        />
-        <button onclick="searchLocation()">Search</button>
-        <br /><br />
-        <input
-          type="text"
-          id="coordInput"
-          placeholder="lat, lon (e.g. 39.4699, -0.3763)"
-        />
-        <button onclick="updateFromCoords()">Set Coordinates</button>
-        <div id="map"></div>
-      </div>
-    </div>
+      </aside>
+
+      <section id="editor">
+        <div id="exifData" aria-label="EXIF Data"></div>
+
+        <div id="locationTools">
+          <h2>Location</h2>
+          <label for="locationSearch">Search for a place:</label>
+          <input
+            type="text"
+            id="locationSearch"
+            placeholder="e.g. Valencia, Spain"
+          />
+
+          <button id="searchBtn">Search</button>
+
+          <br /><br />
+
+          <label for="coordInput">Coordinates:</label>
+          <input
+            type="text"
+            id="coordInput"
+            placeholder="lat, lon (e.g. 39.4699, -0.3763)"
+          />
+          <button id="setCoordBtn">Set Coordinates</button>
+        </div>
+
+        <div id="map" aria-label="Map with draggable marker"></div>
+      </section>
+    </main>
+
     <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>

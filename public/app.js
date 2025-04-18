@@ -1,178 +1,147 @@
-document.addEventListener("DOMContentLoaded", () => {
-  loadFiles();
+// Wait for DOM content to load
+window.addEventListener("DOMContentLoaded", () => {
   initMap();
+  loadFiles();
 });
 
+document.getElementById("searchBtn").addEventListener("click", searchLocation);
+document
+  .getElementById("setCoordBtn")
+  .addEventListener("click", updateFromCoords);
+
 let currentPath = "";
+let map, marker;
 
 async function loadFiles(path = "") {
-  updateBreadcrumb(path);
   currentPath = path;
-
-  const fileListContainer = document.getElementById("fileList");
-  fileListContainer.innerHTML = "<p>Loading files...</p>";
+  updateBreadcrumb(path);
+  const container = document.getElementById("fileList");
+  container.innerHTML = "<p>Loading files...</p>";
 
   try {
-    const response = await fetch(`/files?path=${encodeURIComponent(path)}`);
-    const { entries } = await response.json();
+    const res = await fetch(`/files?path=${encodeURIComponent(path)}`);
+    const { entries } = await res.json();
+    container.innerHTML = "";
 
-    fileListContainer.innerHTML = "";
-
-    // Botón para volver atrás
-    if (path !== "") {
-      const upItem = document.createElement("div");
-      upItem.className = "file-item folder";
-      upItem.textContent = ".. (up)";
-      upItem.addEventListener("click", () => {
-        const parentPath = path.split("/").slice(0, -1).join("/");
-        loadFiles(parentPath);
-      });
-      fileListContainer.appendChild(upItem);
+    if (path) {
+      container.appendChild(
+        createFileItem(".. (up)", true, () => {
+          const parent = path.split("/").slice(0, -1).join("/");
+          loadFiles(parent);
+        })
+      );
     }
 
     entries.forEach(({ name, isDirectory }) => {
-      const item = document.createElement("div");
-      item.className = "file-item";
-      item.textContent = name;
-
-      if (isDirectory) {
-        item.classList.add("folder");
-        item.addEventListener("click", () =>
-          loadFiles(`${path}/${name}`.replace(/^\/+/, ""))
-        );
-      } else {
-        item.addEventListener("click", () =>
-          loadExifData(`${path}/${name}`.replace(/^\/+/, ""))
-        );
-      }
-
-      fileListContainer.appendChild(item);
+      const fullPath = `${path}/${name}`.replace(/^\/+/g, "");
+      const handler = isDirectory
+        ? () => loadFiles(fullPath)
+        : () => loadExifData(fullPath);
+      container.appendChild(createFileItem(name, isDirectory, handler));
     });
-  } catch (error) {
-    console.error("Error loading files:", error);
-    fileListContainer.innerHTML = "<p>Error loading files.</p>";
+  } catch (err) {
+    console.error("Error loading files:", err);
+    container.innerHTML = "<p>Error loading files.</p>";
   }
+}
+
+function createFileItem(name, isDir, onClick) {
+  const item = document.createElement("div");
+  item.className = `file-item${isDir ? " folder" : ""}`;
+  item.textContent = name;
+  item.addEventListener("click", onClick);
+  return item;
 }
 
 function updateBreadcrumb(path) {
-  const breadcrumbContainer = document.getElementById("breadcrumb");
-  breadcrumbContainer.innerHTML = "";
+  const container = document.getElementById("breadcrumb");
+  container.innerHTML = "";
 
-  const parts = path.split("/").filter(Boolean);
-  let accumulatedPath = "";
+  const root = createBreadcrumbLink("📁 Root", "", loadFiles);
+  container.appendChild(root);
 
-  // Agregar el enlace a "Raíz"
-  const rootLink = document.createElement("span");
-  rootLink.textContent = "📁 Root";
-  rootLink.style.cursor = "pointer";
-  rootLink.addEventListener("click", () => loadFiles(""));
-  breadcrumbContainer.appendChild(rootLink);
+  let accumulated = "";
+  path
+    .split("/")
+    .filter(Boolean)
+    .forEach((part) => {
+      container.appendChild(document.createTextNode(" / "));
+      accumulated += `/${part}`;
+      const link = createBreadcrumbLink(part, accumulated, loadFiles);
+      container.appendChild(link);
+    });
+}
 
-  parts.forEach((part, index) => {
-    breadcrumbContainer.appendChild(document.createTextNode(" / "));
-
-    accumulatedPath += "/" + part;
-    const partLink = document.createElement("span");
-    partLink.textContent = part;
-    partLink.style.cursor = "pointer";
-    partLink.addEventListener("click", () =>
-      loadFiles(accumulatedPath.replace(/^\/+/, ""))
-    );
-
-    breadcrumbContainer.appendChild(partLink);
-  });
+function createBreadcrumbLink(text, path, handler) {
+  const span = document.createElement("span");
+  span.textContent = text;
+  span.style.cursor = "pointer";
+  span.addEventListener("click", () => handler(path.replace(/^\/+/g, "")));
+  return span;
 }
 
 async function loadExifData(fileName) {
-  const exifDataContainer = document.getElementById("exifData");
-  exifDataContainer.innerHTML = "<p>Loading EXIF data...</p>";
+  const container = document.getElementById("exifData");
+  container.innerHTML = "<p>Loading EXIF data...</p>";
 
-  try {
-    // Crear un elemento <img> para cargar el archivo
-    const img = new Image();
-    img.src = `/${fileName}`;
-    img.onload = () => {
-      const previewContainer = document.getElementById("imagePreview");
-      previewContainer.innerHTML = "";
-      previewContainer.appendChild(img);
+  const img = new Image();
+  img.src = `/${fileName}`;
+  img.onload = () => displayImageWithExif(img, fileName);
+  img.onerror = () => {
+    container.innerHTML = "<p>Error loading image for EXIF data.</p>";
+  };
+}
 
-      img.style.maxWidth = "200px";
-      img.style.cursor = "pointer";
+function displayImageWithExif(img, fileName) {
+  const preview = document.getElementById("imagePreview");
+  preview.innerHTML = "";
+  img.style.maxWidth = "200px";
+  img.style.cursor = "pointer";
+  preview.appendChild(img);
 
-      img.addEventListener("click", () => {
-        const modal = document.getElementById("imageModal");
-        const modalImg = document.getElementById("modalImage");
-        modalImg.src = img.src;
+  img.addEventListener("click", () => showModal(img));
 
-        const orientation = EXIF.getTag(img, "Orientation");
-        applyOrientation(modalImg, orientation);
+  EXIF.getData(img, function () {
+    const exif = EXIF.getAllTags(this);
+    const container = document.getElementById("exifData");
+    container.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
 
-        modal.style.display = "flex";
-      });
-      EXIF.getData(img, function () {
-        const exifData = EXIF.getAllTags(this);
+    const list = document.createElement("ul");
+    Object.entries(exif).forEach(([tag, value]) => {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      label.textContent = `${tag}: `;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = value;
+      input.dataset.tag = tag;
+      li.append(label, input);
+      list.appendChild(li);
+    });
 
-        if (exifData.Orientation) {
-          applyOrientation(img, exifData.Orientation);
-        }
+    container.appendChild(list);
 
-        exifDataContainer.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
-        const exifList = document.createElement("ul");
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save Changes";
+    saveBtn.addEventListener("click", () => saveExifData(fileName, list));
+    container.appendChild(saveBtn);
 
-        for (let tag in exifData) {
-          const listItem = document.createElement("li");
-          const label = document.createElement("label");
-          label.textContent = `${tag}: `;
-
-          const input = document.createElement("input");
-          input.type = "text";
-          input.value = exifData[tag];
-          input.dataset.tag = tag;
-
-          listItem.appendChild(label);
-          listItem.appendChild(input);
-          exifList.appendChild(listItem);
-        }
-
-        exifDataContainer.appendChild(exifList);
-
-        const saveButton = document.createElement("button");
-        saveButton.textContent = "Save Changes";
-        saveButton.addEventListener("click", () =>
-          saveExifData(fileName, exifList)
-        );
-        exifDataContainer.appendChild(saveButton);
-
-        // Centrar el mapa si hay coordenadas
-        if (exifData.GPSLatitude && exifData.GPSLongitude) {
-          const lat = convertDMSToDD(
-            exifData.GPSLatitude,
-            exifData.GPSLatitudeRef
-          );
-          const lon = convertDMSToDD(
-            exifData.GPSLongitude,
-            exifData.GPSLongitudeRef
-          );
-          marker.setLatLng([lat, lon]);
-          map.setView([lat, lon], 14);
-          document.getElementById("coordInput").value = `${lat.toFixed(
-            6
-          )}, ${lon.toFixed(6)}`;
-        }
-      });
-    };
-
-    img.onerror = () => {
-      exifDataContainer.innerHTML = "<p>Error loading image for EXIF data.</p>";
-    };
-  } catch (error) {
-    console.error("Error loading EXIF data:", error);
-    exifDataContainer.innerHTML = "<p>Error loading EXIF data.</p>";
-  }
+    if (exif.GPSLatitude && exif.GPSLongitude) {
+      const lat = convertDMSToDD(exif.GPSLatitude, exif.GPSLatitudeRef);
+      const lon = convertDMSToDD(exif.GPSLongitude, exif.GPSLongitudeRef);
+      if (lat !== null && lon !== null) {
+        marker.setLatLng([lat, lon]);
+        map.setView([lat, lon], 14);
+        document.getElementById("coordInput").value = `${lat.toFixed(
+          6
+        )}, ${lon.toFixed(6)}`;
+      }
+    }
+  });
 }
 
 function applyOrientation(img, orientation) {
-  const transformMap = {
+  const transforms = {
     2: "scaleX(-1)",
     3: "rotate(180deg)",
     4: "scaleY(-1)",
@@ -181,90 +150,14 @@ function applyOrientation(img, orientation) {
     7: "rotate(-90deg) scaleY(-1)",
     8: "rotate(-90deg)",
   };
-
-  const transform = transformMap[orientation] || "none";
-  img.style.transform = transform;
+  img.style.transform = transforms[orientation] || "none";
 }
 
 function convertDMSToDD(dms, ref) {
-  let degrees, minutes, seconds;
-
-  if (Array.isArray(dms)) {
-    // Si es un array tipo [48, 51, 30.12]
-    [degrees, minutes, seconds] = dms.map(parseFloat);
-  } else if (typeof dms === "string") {
-    // Intenta extraer con regex flexible
-    const match = dms.exec(/(\d+)[°\s]*\s*(\d+)'?\s*(\d+(?:\.\d+)?)/);
-    if (!match) return null;
-
-    degrees = parseFloat(match[1]);
-    minutes = parseFloat(match[2]);
-    seconds = parseFloat(match[3]);
-  } else {
-    return null;
-  }
-
-  let dd = degrees + minutes / 60 + seconds / 3600;
-
-  if (ref === "S" || ref === "W") dd *= -1;
-
-  return dd;
-}
-async function saveExifData(fileName, exifList) {
-  const updatedExif = {};
-  const inputs = exifList.getElementsByTagName("input");
-
-  for (let input of inputs) {
-    updatedExif[input.dataset.tag] = input.value;
-  }
-
-  try {
-    const response = await fetch(`/update-exif`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ fileName, exifData: updatedExif }),
-    });
-
-    if (response.ok) {
-      alert("EXIF data updated successfully.");
-    } else {
-      alert("Error updating EXIF data.");
-    }
-  } catch (error) {
-    console.error("Error saving EXIF data:", error);
-    alert("Error saving EXIF data.");
-  }
-}
-
-let map, marker;
-
-function initMap() {
-  map = L.map("map").setView([0, 0], 2);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors",
-  }).addTo(map);
-
-  marker = L.marker([0, 0], { draggable: true }).addTo(map);
-
-  marker.on("dragend", () => {
-    const { lat, lng } = marker.getLatLng();
-    document.getElementById("coordInput").value = `${lat.toFixed(
-      6
-    )}, ${lng.toFixed(6)}`;
-    updateExifInputsFromCoords(lat, lng);
-  });
-
-  map.on("click", (e) => {
-    const { lat, lng } = e.latlng;
-    marker.setLatLng(e.latlng);
-    document.getElementById("coordInput").value = `${lat.toFixed(
-      6
-    )}, ${lng.toFixed(6)}`;
-    updateExifInputsFromCoords(lat, lng);
-  });
+  if (!dms || !Array.isArray(dms)) return null;
+  const [deg, min, sec] = dms.map(parseFloat);
+  let dd = deg + min / 60 + sec / 3600;
+  return ["S", "W"].includes(ref) ? -dd : dd;
 }
 
 function updateFromCoords() {
@@ -276,73 +169,121 @@ function updateFromCoords() {
   }
 }
 
-async function searchLocation() {
-  const query = document.getElementById("locationSearch").value;
-  if (!query) return;
+async function saveExifData(fileName, exifList) {
+  const exifData = {};
+  Array.from(exifList.querySelectorAll("input")).forEach((input) => {
+    exifData[input.dataset.tag] = input.value;
+  });
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-    query
-  )}`;
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (data.length > 0) {
-    const { lat, lon } = data[0];
-    marker.setLatLng([lat, lon]);
-    map.setView([lat, lon], 14);
-    document.getElementById("coordInput").value = `${lat}, ${lon}`;
-    updateExifInputsFromCoords(parseFloat(lat), parseFloat(lon));
-  } else {
-    alert("Location not found");
+  try {
+    console.log(exifData);
+    const res = await fetch("/update-exif", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName, exifData }),
+    });
+    alert(
+      res.ok ? "EXIF data updated successfully." : "Error updating EXIF data."
+    );
+  } catch (err) {
+    console.error("Error saving EXIF data:", err);
+    alert("Error saving EXIF data.");
   }
 }
 
-function convertDDToDMS(dd, isLat) {
-  const abs = Math.abs(dd);
-  const degrees = Math.floor(abs);
-  const minutesFloat = (abs - degrees) * 60;
-  const minutes = Math.floor(minutesFloat);
-  const seconds = ((minutesFloat - minutes) * 60).toFixed(4);
+function initMap() {
+  map = L.map("map").setView([0, 0], 2);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+  }).addTo(map);
 
-  let ref;
-  if (isLat) {
-    ref = dd >= 0 ? "N" : "S";
-  } else {
-    ref = dd >= 0 ? "E" : "W";
-  }
+  marker = L.marker([0, 0], { draggable: true }).addTo(map);
 
-  return {
-    dms: `${degrees} deg ${minutes}' ${seconds}"`,
-    ref,
-  };
+  marker.on("dragend", updateCoordsFromMarker);
+  map.on("click", (e) => {
+    marker.setLatLng(e.latlng);
+    updateCoordsFromMarker();
+  });
+}
+
+function updateCoordsFromMarker() {
+  const { lat, lng } = marker.getLatLng();
+  document.getElementById("coordInput").value = `${lat.toFixed(
+    6
+  )}, ${lng.toFixed(6)}`;
+  updateExifInputsFromCoords(lat, lng);
 }
 
 function updateExifInputsFromCoords(lat, lon) {
   const latDMS = convertDDToDMS(lat, true);
   const lonDMS = convertDDToDMS(lon, false);
 
-  // Actualiza los inputs si existen
-  const latInput = document.querySelector('input[data-tag="GPSLatitude"]');
-  const latRefInput = document.querySelector(
-    'input[data-tag="GPSLatitudeRef"]'
-  );
-  const lonInput = document.querySelector('input[data-tag="GPSLongitude"]');
-  const lonRefInput = document.querySelector(
-    'input[data-tag="GPSLongitudeRef"]'
-  );
+  const tags = [
+    ["GPSLatitude", latDMS.dms],
+    ["GPSLatitudeRef", latDMS.ref],
+    ["GPSLongitude", lonDMS.dms],
+    ["GPSLongitudeRef", lonDMS.ref],
+  ];
 
-  if (latInput) latInput.value = latDMS.dms;
-  if (latRefInput) latRefInput.value = latDMS.ref;
-  if (lonInput) lonInput.value = lonDMS.dms;
-  if (lonRefInput) lonRefInput.value = lonDMS.ref;
+  tags.forEach(([tag, val]) => {
+    const input = document.querySelector(`input[data-tag="${tag}"]`);
+    if (input) input.value = val;
+  });
 }
 
+function convertDDToDMS(dd, isLat) {
+  const abs = Math.abs(dd);
+  const deg = Math.floor(abs);
+  const minFloat = (abs - deg) * 60;
+  const min = Math.floor(minFloat);
+  const sec = ((minFloat - min) * 60).toFixed(4);
+  const ref = isLat ? (dd >= 0 ? "N" : "S") : dd >= 0 ? "E" : "W";
+  return { dms: `${deg} deg ${min}' ${sec}\"`, ref };
+}
+
+function showModal(img) {
+  const modal = document.getElementById("imageModal");
+  const modalImg = document.getElementById("modalImage");
+  modalImg.src = img.src;
+  const orientation = EXIF.getTag(img, "Orientation");
+  applyOrientation(modalImg, orientation);
+  modal.style.display = "flex";
+}
+
+// Close modal listeners
 document.querySelector("#imageModal .close").addEventListener("click", () => {
   document.getElementById("imageModal").style.display = "none";
 });
 
 document.getElementById("imageModal").addEventListener("click", (e) => {
-  if (e.target === e.currentTarget) {
-    e.currentTarget.style.display = "none";
-  }
+  if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
 });
+
+async function searchLocation() {
+  const query = document.getElementById("locationSearch").value;
+  if (!query) return;
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        query
+      )}`
+    );
+    const data = await res.json();
+
+    if (data.length) {
+      const { lat, lon } = data[0];
+      const latNum = parseFloat(lat);
+      const lonNum = parseFloat(lon);
+      marker.setLatLng([latNum, lonNum]);
+      map.setView([latNum, lonNum], 14);
+      document.getElementById("coordInput").value = `${latNum}, ${lonNum}`;
+      updateExifInputsFromCoords(latNum, lonNum);
+    } else {
+      alert("Location not found");
+    }
+  } catch (err) {
+    console.error("Location search error:", err);
+    alert("Error searching location");
+  }
+}

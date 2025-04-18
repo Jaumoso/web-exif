@@ -64,10 +64,11 @@ app.post("/update-exif", async (req, res) => {
   }
 
   try {
+    console.log(exifData);
     await exiftool.write(filePath, exifData, {
       writeArgs: [
         "-overwrite_original",
-        // "-gps:all=", // Clear all GPS fields before writing new ones
+        "-gps:all=", // Clear all GPS fields before writing new ones
         "-preserve",
       ],
     });
