@@ -1,0 +1,77 @@
+const unwritableTags = [
+  "LightValue",
+  "ExifToolVersion",
+  "FileSize",
+  "FileAccessDate",
+  "FileType",
+  "FileTypeExtension",
+  "MIMEType",
+  "JFIFVersion",
+  "ProfileCMMType",
+  "ProfileVersion",
+  "ProfileClass",
+  "ColorSpaceData",
+  "ProfileConnectionSpace",
+  "ProfileDateTime",
+  "ProfileFileSignature",
+  "PrimaryPlatform",
+  "CMMFlags",
+  "DeviceManufacturer",
+  "DeviceModel",
+  "DeviceAttributes",
+  "RenderingIntent",
+  "ConnectionSpaceIlluminant",
+  "ProfileCreator",
+  "ProfileID",
+  "ProfileDescription",
+  "MediaWhitePoint",
+  "MediaBlackPoint",
+  "RedMatrixColumn",
+  "GreenMatrixColumn",
+  "BlueMatrixColumn",
+  "RedTRC",
+  "GreenTRC",
+  "BlueTRC",
+  "ChromaticAdaptation",
+  "EncodingProcess",
+  "ColorComponents",
+  "Aperture",
+  "Megapixels",
+  "ScaleFactor35efl",
+  "ShutterSpeed",
+  "CircleOfConfusion",
+  "DOF",
+  "FOV",
+  "FocalLength35efl",
+  "HyperfocalDistance",
+  "LightValue",
+];
+
+const ignoredTags = ["errors", "warnings", "thumbnail"];
+
+const enumTags = {
+  Flash: {
+    0x0: "Flash did not fire",
+    0x1: "Flash fired",
+    0x5: "Strobe return light not detected",
+    0x7: "Flash fired, strobe return light detected",
+    0x9: "Flash fired, compulsory flash mode",
+    0xd: "Flash fired, compulsory flash mode, return light not detected",
+    0xf: "Flash fired, compulsory flash mode, return light detected",
+    0x10: "Flash did not fire, compulsory flash mode",
+    // Add more if needed
+  },
+};
+
+
+// if (enumTags[tag]) {
+//   input = document.createElement("select");
+//   for (const [key, labelText] of Object.entries(enumTags[tag])) {
+//     const option = document.createElement("option");
+//     option.value = key;
+//     option.textContent = labelText;
+//     if (value == key || value == labelText) option.selected = true;
+//     input.appendChild(option);
+//   }
+// }
+

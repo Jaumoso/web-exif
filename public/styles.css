@@ -110,6 +110,10 @@ body {
     box-sizing: border-box;
   }
 
+  input:read-only {
+    background-color: #ccc;
+  }
+
   select {
     padding: 8px;
     border-radius: 6px;

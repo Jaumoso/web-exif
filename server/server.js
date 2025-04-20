@@ -1,8 +1,6 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const cors = require("cors");
-const bodyParser = require("body-parser");
 const { exiftool } = require("exiftool-vendored");
 const RateLimit = require("express-rate-limit");
 require("dotenv").config({ path: path.resolve(__dirname, "./.env") });
@@ -54,7 +52,12 @@ app.post("/update-exif", async (req, res) => {
 
   try {
     console.log("Received EXIF data:", exifData);
-    const result = await exiftool.write(filePath, exifData, {
+    const filteredExifData = Object.fromEntries(
+      Object.entries(exifData).filter(([key]) => {
+        return !ignoredTags.includes(key) && !unwritableTags.includes(key);
+      })
+    );
+    const result = await exiftool.write(filePath, filteredExifData, {
       writeArgs: ["-overwrite_original", "-gps:all=", "-preserve"],
     });
     console.log("Exiftool result:", result);
@@ -66,6 +69,24 @@ app.post("/update-exif", async (req, res) => {
   } catch (error) {
     console.error("Error updating EXIF data:", error);
     res.status(500).send("Error updating EXIF data.");
+  }
+});
+
+app.get("/exif", async (req, res) => {
+  const { fileName } = req.query;
+  const filePath = path.resolve(rootDir, fileName);
+
+  if (!filePath.startsWith(rootDir) || !fs.existsSync(filePath)) {
+    return res.status(404).send("File not found or invalid path.");
+  }
+
+  try {
+    const tags = await exiftool.read(filePath);
+    console.log("Exiftool tags:", tags);
+    res.json(tags);
+  } catch (error) {
+    console.error("Error reading EXIF data:", error);
+    res.status(500).send("Error reading EXIF data.");
   }
 });
 
@@ -83,3 +104,54 @@ app.get("/", (_, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+const ignoredTags = ["errors", "warnings", "thumbnail"];
+const unwritableTags = [
+  "LightValue",
+  "ExifToolVersion",
+  "FileSize",
+  "FileAccessDate",
+  "FileType",
+  "FileTypeExtension",
+  "MIMEType",
+  "JFIFVersion",
+  "ProfileCMMType",
+  "ProfileVersion",
+  "ProfileClass",
+  "ColorSpaceData",
+  "ProfileConnectionSpace",
+  "ProfileDateTime",
+  "ProfileFileSignature",
+  "PrimaryPlatform",
+  "CMMFlags",
+  "DeviceManufacturer",
+  "DeviceModel",
+  "DeviceAttributes",
+  "RenderingIntent",
+  "ConnectionSpaceIlluminant",
+  "ProfileCreator",
+  "ProfileID",
+  "ProfileDescription",
+  "MediaWhitePoint",
+  "MediaBlackPoint",
+  "RedMatrixColumn",
+  "GreenMatrixColumn",
+  "BlueMatrixColumn",
+  "RedTRC",
+  "GreenTRC",
+  "BlueTRC",
+  "ChromaticAdaptation",
+  "EncodingProcess",
+  "ColorComponents",
+  "Aperture",
+  "Megapixels",
+  "ScaleFactor35efl",
+  "ShutterSpeed",
+  "CircleOfConfusion",
+  "DOF",
+  "FOV",
+  "FocalLength35efl",
+  "HyperfocalDistance",
+  "LightValue",
+  "ZoneIndentifier",
+];

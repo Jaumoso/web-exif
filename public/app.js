@@ -87,7 +87,7 @@ async function loadExifData(fileName) {
   };
 }
 
-function displayImageWithExif(img, fileName) {
+async function displayImageWithExif(img, fileName) {
   const preview = document.getElementById("imagePreview");
   preview.innerHTML = "";
   img.style.maxWidth = "200px";
@@ -96,100 +96,79 @@ function displayImageWithExif(img, fileName) {
 
   img.addEventListener("click", () => showModal(img));
 
-  EXIF.getData(img, function () {
-    const exif = EXIF.getAllTags(this);
-    const container = document.getElementById("exifData");
-    container.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
+  const res = await fetch(`/exif?fileName=${encodeURIComponent(fileName)}`);
+  const exif = await res.json();
+  console.log(exif);
 
-    const list = document.createElement("ul");
-    list.setAttribute("id", "exifParametersList");
+  const container = document.getElementById("exifData");
+  container.innerHTML = `<h3>EXIF Data for ${fileName}</h3>`;
 
-    const nonEditableTags = ["thumbnail"];
-    const enumTags = {
-      Flash: {
-        0x0: "Flash did not fire",
-        0x1: "Flash fired",
-        0x5: "Strobe return light not detected",
-        0x7: "Flash fired, strobe return light detected",
-        0x9: "Flash fired, compulsory flash mode",
-        0xd: "Flash fired, compulsory flash mode, return light not detected",
-        0xf: "Flash fired, compulsory flash mode, return light detected",
-        0x10: "Flash did not fire, compulsory flash mode",
-        // Add more if needed
-      },
-    };
+  const list = document.createElement("ul");
+  list.setAttribute("id", "exifParametersList");
 
-    Object.entries(exif).forEach(([tag, value]) => {
-      if (nonEditableTags.includes(tag)) return;
+  const gpsTags = [
+    { tag: "GPSLatitude", value: exif.GPSLatitude || "" },
+    { tag: "GPSLongitude", value: exif.GPSLongitude || "" },
+    { tag: "GPSLatitudeRef", value: exif.GPSLatitudeRef || "" },
+    { tag: "GPSLongitudeRef", value: exif.GPSLongitudeRef || "" },
+    { tag: "GPSAltitude", value: exif.GPSAltitude || "" },
+    { tag: "GPSAltitudeRef", value: exif.GPSAltitudeRef || "" },
+    { tag: "GPSPosition", value: exif.GPSPosition || "" },
+  ];
 
-      const li = document.createElement("li");
-      const label = document.createElement("label");
-      label.textContent = `${tag}: `;
-
-      let input;
-      if (enumTags[tag]) {
-        input = document.createElement("select");
-        for (const [key, labelText] of Object.entries(enumTags[tag])) {
-          const option = document.createElement("option");
-          option.value = key;
-          option.textContent = labelText;
-          if (value == key || value == labelText) option.selected = true;
-          input.appendChild(option);
-        }
-      } else if (typeof value === "number") {
-        input = document.createElement("input");
-        input.type = "number";
-        input.step = "any";
-        input.value = value;
-      } else if (typeof value === "string") {
-        input = document.createElement("input");
-        input.type = "text";
-        input.value = value;
-      } else {
-        input = document.createElement("input");
-        input.type = "text";
-        input.value = JSON.stringify(value);
-        input.readOnly = true;
-      }
-
-      input.dataset.tag = tag;
-      li.append(label, input);
-      list.appendChild(li);
-    });
-
-    container.appendChild(list);
-
-    const saveBtn = document.createElement("button");
-    saveBtn.textContent = "Save Changes";
-    saveBtn.addEventListener("click", () => saveExifData(fileName, list));
-    container.appendChild(saveBtn);
-
-    // GPS to map
-    if (exif.GPSLatitude && exif.GPSLongitude) {
-      const lat = convertDMSToDD(exif.GPSLatitude, exif.GPSLatitudeRef);
-      const lon = convertDMSToDD(exif.GPSLongitude, exif.GPSLongitudeRef);
-      if (lat !== null && lon !== null) {
-        marker.setLatLng([lat, lon]);
-        map.setView([lat, lon], 14);
-        document.getElementById("coordInput").value = `${lat.toFixed(
-          6
-        )}, ${lon.toFixed(6)}`;
-      }
+  gpsTags.forEach(({ tag, value }) => {
+    if (!exif.hasOwnProperty(tag)) {
+      exif[tag] = value;
     }
   });
-}
 
-function applyOrientation(img, orientation) {
-  const transforms = {
-    2: "scaleX(-1)",
-    3: "rotate(180deg)",
-    4: "scaleY(-1)",
-    5: "rotate(90deg) scaleY(-1)",
-    6: "rotate(90deg)",
-    7: "rotate(-90deg) scaleY(-1)",
-    8: "rotate(-90deg)",
-  };
-  img.style.transform = transforms[orientation] || "none";
+  Object.entries(exif).forEach(([tag, value]) => {
+    if (ignoredTags.includes(tag)) return;
+
+    const li = document.createElement("li");
+    const label = document.createElement("label");
+    label.textContent = `${tag}: `;
+
+    let input;
+    input = document.createElement("input");
+    input.readOnly = unwritableTags.includes(tag);
+
+    if (typeof value === "number") {
+      input.type = "number";
+      input.step = "any";
+      input.value = value;
+    } else if (typeof value === "string") {
+      input.type = "text";
+      input.value = value;
+    } else {
+      input.type = "text";
+      input.value = JSON.stringify(value);
+    }
+
+    input.dataset.tag = tag;
+    li.append(label, input);
+    list.appendChild(li);
+  });
+
+  container.appendChild(list);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.textContent = "Save Changes";
+  saveBtn.addEventListener("click", () => saveExifData(fileName, list));
+  container.appendChild(saveBtn);
+
+  // GPS to map
+  if (exif.GPSLatitude && exif.GPSLongitude) {
+    const lat = exif.GPSLatitude;
+    const lon = exif.GPSLongitude;
+    if (lat !== null && lon !== null) {
+      marker.setLatLng([lat, lon]);
+      map.setView([lat, lon], 14);
+      document.getElementById("coordInput").value = `${lat.toFixed(
+        6
+      )}, ${lon.toFixed(6)}`;
+    }
+  }
 }
 
 function convertDMSToDD(dms, ref) {
@@ -249,15 +228,31 @@ function updateCoordsFromMarker() {
   updateExifInputsFromCoords(lat, lng);
 }
 
-function updateExifInputsFromCoords(lat, lon) {
-  const latDMS = convertDDToDMS(lat, true);
-  const lonDMS = convertDDToDMS(lon, false);
+async function updateExifInputsFromCoords(lat, lon) {
+  const latRef = lat >= 0 ? "N" : "S";
+  const lonRef = lon >= 0 ? "E" : "W";
+
+  const elevation = await fetch(
+    `https://api.open-elevation.com/api/v1/lookup?locations=${encodeURIComponent(
+      `${lat},${lon}`
+    )}`
+  )
+    .then((res) => res.json())
+    .then((data) => data.results[0].elevation);
+
+  let elevationRef = 0;
+  if (elevation && elevation < 0) {
+    elevationRef = 1;
+  }
 
   const tags = [
-    ["GPSLatitude", latDMS.dms],
-    ["GPSLatitudeRef", latDMS.ref],
-    ["GPSLongitude", lonDMS.dms],
-    ["GPSLongitudeRef", lonDMS.ref],
+    ["GPSLatitude", lat],
+    ["GPSLatitudeRef", latRef],
+    ["GPSLongitude", lon],
+    ["GPSLongitudeRef", lonRef],
+    ["GPSAltitude", elevation],
+    ["GPSAltitudeRef", elevationRef],
+    ["GPSPosition", `${lat} ${lon}`],
   ];
 
   tags.forEach(([tag, val]) => {
@@ -266,27 +261,10 @@ function updateExifInputsFromCoords(lat, lon) {
   });
 }
 
-function convertDDToDMS(dd, isLat) {
-  const abs = Math.abs(dd);
-  const deg = Math.floor(abs);
-  const minFloat = (abs - deg) * 60;
-  const min = Math.floor(minFloat);
-  const sec = ((minFloat - min) * 60).toFixed(4);
-  let ref;
-  if (isLat) {
-    ref = dd >= 0 ? "N" : "S";
-  } else {
-    ref = dd >= 0 ? "E" : "W";
-  }
-  return { dms: `${deg} deg ${min}' ${sec}"`, ref };
-}
-
 function showModal(img) {
   const modal = document.getElementById("imageModal");
   const modalImg = document.getElementById("modalImage");
   modalImg.src = img.src;
-  const orientation = EXIF.getTag(img, "Orientation");
-  applyOrientation(modalImg, orientation);
   modal.style.display = "flex";
 }
 
@@ -391,3 +369,54 @@ document.getElementById("coordInput").addEventListener("keydown", function (e) {
     }
   }
 });
+
+const ignoredTags = ["errors", "warnings", "thumbnail"];
+const unwritableTags = [
+  "LightValue",
+  "ExifToolVersion",
+  "FileSize",
+  "FileAccessDate",
+  "FileType",
+  "FileTypeExtension",
+  "MIMEType",
+  "JFIFVersion",
+  "ProfileCMMType",
+  "ProfileVersion",
+  "ProfileClass",
+  "ColorSpaceData",
+  "ProfileConnectionSpace",
+  "ProfileDateTime",
+  "ProfileFileSignature",
+  "PrimaryPlatform",
+  "CMMFlags",
+  "DeviceManufacturer",
+  "DeviceModel",
+  "DeviceAttributes",
+  "RenderingIntent",
+  "ConnectionSpaceIlluminant",
+  "ProfileCreator",
+  "ProfileID",
+  "ProfileDescription",
+  "MediaWhitePoint",
+  "MediaBlackPoint",
+  "RedMatrixColumn",
+  "GreenMatrixColumn",
+  "BlueMatrixColumn",
+  "RedTRC",
+  "GreenTRC",
+  "BlueTRC",
+  "ChromaticAdaptation",
+  "EncodingProcess",
+  "ColorComponents",
+  "Aperture",
+  "Megapixels",
+  "ScaleFactor35efl",
+  "ShutterSpeed",
+  "CircleOfConfusion",
+  "DOF",
+  "FOV",
+  "FocalLength35efl",
+  "HyperfocalDistance",
+  "LightValue",
+  "ZoneIndentifier",
+];
